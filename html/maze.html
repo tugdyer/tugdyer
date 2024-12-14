@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Maze Game</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .maze {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            border: 2px solid #000;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .wall, .obstacle {
+            position: absolute;
+            background-color: #000;
+        }
+        .ball {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: red;
+        }
+        .finish {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: green;
+            bottom: 20px;
+            right: 20px;
+        }
+        .message {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html">Home        </a>
+    <div class="maze" id="maze">
+        <div id="ball" class="ball"></div>
+        <div id="finish" class="finish"></div>
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        const mazeSize = 500; // Maze dimensions (500px x 500px)
+        const wallThickness = 30; // Wall thickness
+        const ballSize = 30; // Ball size (30px)
+        const maxWalls = 20; // Max number of walls
+        const maxObstacles = 10; // Max number of obstacles
+        let ballElement = document.getElementById('ball');
+        let mazeElement = document.getElementById('maze');
+        let finishElement = document.getElementById('finish');
+        let messageElement = document.getElementById('message');
+        let ballX = 20, ballY = 20; // Initial ball position
+        let isGameOver = false;
+        let walls = [];
+        let obstacles = [];
+
+        // Function to start the game
+        function startGame() {
+            isGameOver = false;
+            ballX = 20;
+            ballY = 20;
+            ballElement.style.left = `${ballX}px`;
+            ballElement.style.top = `${ballY}px`;
+            walls = [];
+            obstacles = [];
+            messageElement.style.display = 'none'; // Hide the message
+            drawRandomMaze();
+        }
+
+        // Draw random maze with walls and obstacles
+        function drawRandomMaze() {
+            // Clear existing walls and obstacles
+            const existingWalls = document.querySelectorAll('.wall');
+            const existingObstacles = document.querySelectorAll('.obstacle');
+            existingWalls.forEach(wall => wall.remove());
+            existingObstacles.forEach(obstacle => obstacle.remove());
+
+            // Generate random walls
+            let numWalls = Math.floor(Math.random() * maxWalls) + 5;
+            for (let i = 0; i < numWalls; i++) {
+                let wall = createRandomWall();
+                if (isValidWall(wall)) {
+                    walls.push(wall);
+                    mazeElement.appendChild(wall);
+                } else {
+                    i--; // Retry if the wall position is invalid
+                }
+            }
+
+            // Generate random obstacles
+            let numObstacles = Math.floor(Math.random() * maxObstacles) + 5;
+            for (let i = 0; i < numObstacles; i++) {
+                let obstacle = createRandomObstacle();
+                if (isValidObstacle(obstacle)) {
+                    obstacles.push(obstacle);
+                    mazeElement.appendChild(obstacle);
+                } else {
+                    i--; // Retry if the obstacle position is invalid
+                }
+            }
+        }
+
+        // Create a random wall
+        function createRandomWall() {
+            let x = Math.floor(Math.random() * (mazeSize - wallThickness));
+            let y = Math.floor(Math.random() * (mazeSize - wallThickness));
+            let width = Math.floor(Math.random() * (mazeSize - x - wallThickness)) + wallThickness;
+            let height = Math.floor(Math.random() * (mazeSize - y - wallThickness)) + wallThickness;
+
+            let wallElement = document.createElement('div');
+            wallElement.classList.add('wall');
+            wallElement.style.top = `${y}px`;
+            wallElement.style.left = `${x}px`;
+            wallElement.style.width = `${width}px`;
+            wallElement.style.height = `${height}px`;
+
+            return wallElement;
+        }
+
+        // Create a random obstacle
+        function createRandomObstacle() {
+            let x = Math.floor(Math.random() * (mazeSize - ballSize));
+            let y = Math.floor(Math.random() * (mazeSize - ballSize));
+            let width = Math.floor(Math.random() * (mazeSize - x - ballSize)) + ballSize;
+            let height = Math.floor(Math.random() * (mazeSize - y - ballSize)) + ballSize;
+
+            let obstacleElement = document.createElement('div');
+            obstacleElement.classList.add('obstacle');
+            obstacleElement.style.top = `${y}px`;
+            obstacleElement.style.left = `${x}px`;
+            obstacleElement.style.width = `${width}px`;
+            obstacleElement.style.height = `${height}px`;
+
+            return obstacleElement;
+        }
+
+        // Check if the ball collides with any wall or obstacle
+        function checkCollision() {
+            // Check for walls collision
+            for (let wall of walls) {
+                let wallRect = wall.getBoundingClientRect();
+                let ballRect = ballElement.getBoundingClientRect();
+                if (ballRect.left < wallRect.right &&
+                    ballRect.right > wallRect.left &&
+                    ballRect.top < wallRect.bottom &&
+                    ballRect.bottom > wallRect.top) {
+                    return true; // Collision with wall
+                }
+            }
+
+            // Check for obstacles collision
+            for (let obstacle of obstacles) {
+                let obstacleRect = obstacle.getBoundingClientRect();
+                let ballRect = ballElement.getBoundingClientRect();
+                if (ballRect.left < obstacleRect.right &&
+                    ballRect.right > obstacleRect.left &&
+                    ballRect.top < obstacleRect.bottom &&
+                    ballRect.bottom > obstacleRect.top) {
+                    return true; // Collision with obstacle
+                }
+            }
+
+            return false; // No collision
+        }
+
+        // Check if the ball reaches the finish
+        function checkFinish() {
+            let finishRect = finishElement.getBoundingClientRect();
+            let ballRect = ballElement.getBoundingClientRect();
+            return ballRect.left < finishRect.right && ballRect.right > finishRect.left &&
+                   ballRect.top < finishRect.bottom && ballRect.bottom > finishRect.top;
+        }
+
+        // Game Over function
+        function gameOver() {
+            if (isGameOver) return;
+            isGameOver = true;
+            messageElement.innerText = "You hit an obstacle or wall! Try again.";
+            messageElement.style.display = 'block';
+            setTimeout(startGame, 2000); // Restart the game after 2 seconds
+        }
+
+        // Game Success (finish reached)
+        function gameSuccess() {
+            if (isGameOver) return;
+            isGameOver = true;
+            messageElement.innerText = "Congratulations! You reached the finish.";
+            messageElement.style.display = 'block';
+            setTimeout(startGame, 2000); // Restart the game after 2 seconds
+        }
+
+        // Move the ball with arrow keys
+        document.addEventListener('keydown', (event) => {
+            if (isGameOver) return;
+
+            if (event.key === 'ArrowUp') ballY -= 10;
+            if (event.key === 'ArrowDown') ballY += 10;
+            if (event.key === 'ArrowLeft') ballX -= 10;
+            if (event.key === 'ArrowRight') ballX += 10;
+
+            // Ensure ball stays inside the maze
+            if (ballX < 0) ballX = 0;
+            if (ballX > mazeSize - ballSize) ballX = mazeSize - ballSize;
+            if (ballY < 0) ballY = 0;
+            if (ballY > mazeSize - ballSize) ballY = mazeSize - ballSize;
+
+            ballElement.style.left = `${ballX}px`;
+            ballElement.style.top = `${ballY}px`;
+
+            // Check for collisions with walls or obstacles
+            if (checkCollision()) {
+                gameOver();
+            }
+
+            // Check if the ball reaches the finish
+            if (checkFinish()) {
+                gameSuccess();
+            }
+        });
+
+        // Start the game when the page loads
+        startGame();
+    </script>
+</body>
+</html>
