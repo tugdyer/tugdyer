@@ -3,252 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Random Maze Game</title>
+    <title>Maze Game</title>
     <style>
         body {
-            margin: 0;
             font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f0f0f0;
+            margin: 0;
+            background-color: #f4f4f4;
         }
-        .maze {
-            position: relative;
-            width: 500px;
-            height: 500px;
+        .game-container {
+            text-align: center;
+        }
+        canvas {
             border: 2px solid #000;
             background-color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
-        .wall, .obstacle {
-            position: absolute;
-            background-color: #000;
-        }
-        .ball {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background-color: red;
-        }
-        .finish {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background-color: green;
-            bottom: 20px;
-            right: 20px;
+            display: block;
+            margin: 0 auto;
         }
         .message {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
+            font-size: 20px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <a href="../index.html">Home        </a>
-    <br><br>
-    <p>Use the arrow keys to get the red dot to touch the green dot!</p>
-    <div class="maze" id="maze">
-        <div id="ball" class="ball"></div>
-        <div id="finish" class="finish"></div>
-        <div id="message" class="message"></div>
+    <div class="game-container">
+        <a href="../index.html">Home</a>
+        <div class="message">Use your arrow keys to get through the maze!</div>
+        <canvas id="mazeCanvas" width="400" height="400"></canvas>
     </div>
-
     <script>
-        const mazeSize = 500; // Maze dimensions (500px x 500px)
-        const wallThickness = 30; // Wall thickness
-        const ballSize = 30; // Ball size (30px)
-        const maxWalls = 20; // Max number of walls
-        const maxObstacles = 10; // Max number of obstacles
-        let ballElement = document.getElementById('ball');
-        let mazeElement = document.getElementById('maze');
-        let finishElement = document.getElementById('finish');
-        let messageElement = document.getElementById('message');
-        let ballX = 20, ballY = 20; // Initial ball position
+        const canvas = document.getElementById("mazeCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const gridSize = 20;
+        const canvasSize = 400;
+        const cols = canvasSize / gridSize;
+        const rows = canvasSize / gridSize;
+
+        let player = { x: 1, y: 1, size: gridSize };
+        let maze = [];
         let isGameOver = false;
-        let walls = [];
-        let obstacles = [];
 
-        // Function to start the game
-        function startGame() {
+        // Generate a random maze
+        function generateMaze() {
+            maze = [];
+            for (let y = 0; y < rows; y++) {
+                maze[y] = [];
+                for (let x = 0; x < cols; x++) {
+                    maze[y][x] = Math.random() < 0.3 ? 1 : 0; // 1 is wall, 0 is path
+                }
+            }
+            maze[0][1] = 0; // Ensure start is clear
+            maze[rows - 1][cols - 2] = 0; // Ensure end is clear
+        }
+
+        // Draw the maze on the canvas
+        function drawMaze() {
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (maze[y][x] === 1) {
+                        ctx.fillStyle = "black";
+                    } else {
+                        ctx.fillStyle = "white";
+                    }
+
+                    // Draw the maze cells
+                    ctx.fillRect(x * gridSize, y * gridSize, gridSize, gridSize);
+                    ctx.strokeRect(x * gridSize, y * gridSize, gridSize, gridSize);
+                }
+            }
+
+            // Draw the finish line (light green)
+            ctx.fillStyle = "lightgreen";
+            ctx.fillRect((cols - 2) * gridSize, (rows - 1) * gridSize, gridSize, gridSize);
+        }
+
+        // Draw the player on the canvas
+        function drawPlayer() {
+            ctx.fillStyle = "red";
+            ctx.fillRect(player.x * gridSize, player.y * gridSize, player.size, player.size);
+        }
+
+        // Check if the player hits a wall
+        function isCollision(x, y) {
+            return maze[y] && maze[y][x] === 1;
+        }
+
+        // Handle player movement
+        function movePlayer(e) {
+            if (isGameOver) return;
+
+            let nextX = player.x;
+            let nextY = player.y;
+
+            if (e.key === "ArrowUp" && player.y > 0) nextY--;
+            if (e.key === "ArrowDown" && player.y < rows - 1) nextY++;
+            if (e.key === "ArrowLeft" && player.x > 0) nextX--;
+            if (e.key === "ArrowRight" && player.x < cols - 1) nextX++;
+
+            // Check for collision with walls
+            if (!isCollision(nextX, nextY)) {
+                player.x = nextX;
+                player.y = nextY;
+            }
+
+            // Check if player reaches the end
+            if (player.x === cols - 2 && player.y === rows - 1) {
+                alert("You completed the maze!");
+                isGameOver = true;
+            }
+
+            draw();
+        }
+
+        // Reset the game state
+        function resetGame() {
+            player.x = 1;
+            player.y = 1;
             isGameOver = false;
-            ballX = 20;
-            ballY = 20;
-            ballElement.style.left = `${ballX}px`;
-            ballElement.style.top = `${ballY}px`;
-            walls = [];
-            obstacles = [];
-            messageElement.style.display = 'none'; // Hide the message
-            drawRandomMaze();
+            generateMaze();
+            draw();
         }
 
-        // Draw random maze with walls and obstacles
-        function drawRandomMaze() {
-            // Clear existing walls and obstacles
-            const existingWalls = document.querySelectorAll('.wall');
-            const existingObstacles = document.querySelectorAll('.obstacle');
-            existingWalls.forEach(wall => wall.remove());
-            existingObstacles.forEach(obstacle => obstacle.remove());
-
-            // Generate random walls
-            let numWalls = Math.floor(Math.random() * maxWalls) + 5;
-            for (let i = 0; i < numWalls; i++) {
-                let wall = createRandomWall();
-                if (isValidWall(wall)) {
-                    walls.push(wall);
-                    mazeElement.appendChild(wall);
-                } else {
-                    i--; // Retry if the wall position is invalid
-                }
-            }
-
-            // Generate random obstacles
-            let numObstacles = Math.floor(Math.random() * maxObstacles) + 5;
-            for (let i = 0; i < numObstacles; i++) {
-                let obstacle = createRandomObstacle();
-                if (isValidObstacle(obstacle)) {
-                    obstacles.push(obstacle);
-                    mazeElement.appendChild(obstacle);
-                } else {
-                    i--; // Retry if the obstacle position is invalid
-                }
-            }
+        // Draw the game elements on the canvas
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMaze();
+            drawPlayer();
         }
 
-        // Create a random wall
-        function createRandomWall() {
-            let x = Math.floor(Math.random() * (mazeSize - wallThickness));
-            let y = Math.floor(Math.random() * (mazeSize - wallThickness));
-            let width = Math.floor(Math.random() * (mazeSize - x - wallThickness)) + wallThickness;
-            let height = Math.floor(Math.random() * (mazeSize - y - wallThickness)) + wallThickness;
-
-            let wallElement = document.createElement('div');
-            wallElement.classList.add('wall');
-            wallElement.style.top = `${y}px`;
-            wallElement.style.left = `${x}px`;
-            wallElement.style.width = `${width}px`;
-            wallElement.style.height = `${height}px`;
-
-            return wallElement;
-        }
-
-        // Create a random obstacle
-        function createRandomObstacle() {
-            let x = Math.floor(Math.random() * (mazeSize - ballSize));
-            let y = Math.floor(Math.random() * (mazeSize - ballSize));
-            let width = Math.floor(Math.random() * (mazeSize - x - ballSize)) + ballSize;
-            let height = Math.floor(Math.random() * (mazeSize - y - ballSize)) + ballSize;
-
-            let obstacleElement = document.createElement('div');
-            obstacleElement.classList.add('obstacle');
-            obstacleElement.style.top = `${y}px`;
-            obstacleElement.style.left = `${x}px`;
-            obstacleElement.style.width = `${width}px`;
-            obstacleElement.style.height = `${height}px`;
-
-            return obstacleElement;
-        }
-
-        // Check if the ball collides with any wall or obstacle
-        function checkCollision() {
-            // Check for walls collision
-            for (let wall of walls) {
-                let wallRect = wall.getBoundingClientRect();
-                let ballRect = ballElement.getBoundingClientRect();
-                if (ballRect.left < wallRect.right &&
-                    ballRect.right > wallRect.left &&
-                    ballRect.top < wallRect.bottom &&
-                    ballRect.bottom > wallRect.top) {
-                    return true; // Collision with wall
-                }
-            }
-
-            // Check for obstacles collision
-            for (let obstacle of obstacles) {
-                let obstacleRect = obstacle.getBoundingClientRect();
-                let ballRect = ballElement.getBoundingClientRect();
-                if (ballRect.left < obstacleRect.right &&
-                    ballRect.right > obstacleRect.left &&
-                    ballRect.top < obstacleRect.bottom &&
-                    ballRect.bottom > obstacleRect.top) {
-                    return true; // Collision with obstacle
-                }
-            }
-
-            return false; // No collision
-        }
-
-        // Check if the ball reaches the finish
-        function checkFinish() {
-            let finishRect = finishElement.getBoundingClientRect();
-            let ballRect = ballElement.getBoundingClientRect();
-            return ballRect.left < finishRect.right && ballRect.right > finishRect.left &&
-                   ballRect.top < finishRect.bottom && ballRect.bottom > finishRect.top;
-        }
-
-        // Game Over function
-        function gameOver() {
-            if (isGameOver) return;
-            isGameOver = true;
-            messageElement.innerText = "You hit an obstacle or wall! Try again.";
-            messageElement.style.display = 'block';
-            setTimeout(startGame, 2000); // Restart the game after 2 seconds
-        }
-
-        // Game Success (finish reached)
-        function gameSuccess() {
-            if (isGameOver) return;
-            isGameOver = true;
-            messageElement.innerText = "Congratulations! You reached the finish.";
-            messageElement.style.display = 'block';
-            setTimeout(startGame, 2000); // Restart the game after 2 seconds
-        }
-
-        // Move the ball with arrow keys
-        document.addEventListener('keydown', (event) => {
-            if (isGameOver) return;
-
-            if (event.key === 'ArrowUp') ballY -= 10;
-            if (event.key === 'ArrowDown') ballY += 10;
-            if (event.key === 'ArrowLeft') ballX -= 10;
-            if (event.key === 'ArrowRight') ballX += 10;
-
-            // Ensure ball stays inside the maze
-            if (ballX < 0) ballX = 0;
-            if (ballX > mazeSize - ballSize) ballX = mazeSize - ballSize;
-            if (ballY < 0) ballY = 0;
-            if (ballY > mazeSize - ballSize) ballY = mazeSize - ballSize;
-
-            ballElement.style.left = `${ballX}px`;
-            ballElement.style.top = `${ballY}px`;
-
-            // Check for collisions with walls or obstacles
-            if (checkCollision()) {
-                gameOver();
-            }
-
-            // Check if the ball reaches the finish
-            if (checkFinish()) {
-                gameSuccess();
+        // Start the game
+        window.addEventListener("keydown", function(e) {
+            if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                movePlayer(e);
             }
         });
 
-        // Start the game when the page loads
-        startGame();
+        // Initialize the game
+        generateMaze();
+        draw();
     </script>
 </body>
 </html>
